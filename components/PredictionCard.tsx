@@ -1,6 +1,6 @@
 import React from 'react';
 import { Prediction, SectionType } from '../types';
-import { ArrowRight, TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock, Target, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface PredictionCardProps {
   prediction: Prediction;
@@ -10,98 +10,118 @@ interface PredictionCardProps {
 const PredictionCard: React.FC<PredictionCardProps> = ({ prediction, type }) => {
   const isVip = type === SectionType.VIP;
 
-  // Dynamic styling based on confidence
-  const getConfidenceColor = (conf: number) => {
-    if (conf >= 80) return 'text-emerald-400 bg-emerald-400/10 border-emerald-500/20';
-    if (conf >= 60) return 'text-amber-400 bg-amber-400/10 border-amber-500/20';
-    return 'text-rose-400 bg-rose-400/10 border-rose-500/20';
-  };
+  // Confidence calculations
+  const confidenceColor = prediction.confidence >= 80 ? 'text-emerald-400' : prediction.confidence >= 60 ? 'text-amber-400' : 'text-rose-400';
+  const confidenceBg = prediction.confidence >= 80 ? 'bg-emerald-500' : prediction.confidence >= 60 ? 'bg-amber-500' : 'bg-rose-500';
 
-  const getRiskColor = (risk: string) => {
+  const getRiskIcon = (risk: string) => {
     switch (risk.toLowerCase()) {
-      case 'low': return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5';
-      case 'medium': return 'text-amber-400 border-amber-500/30 bg-amber-500/5';
-      case 'high': return 'text-rose-400 border-rose-500/30 bg-rose-500/5';
-      default: return 'text-slate-400 border-slate-600';
+      case 'low': return <Shield size={12} className="text-emerald-400" />;
+      case 'medium': return <CheckCircle2 size={12} className="text-amber-400" />;
+      case 'high': return <AlertTriangle size={12} className="text-rose-400" />;
+      default: return null;
     }
   };
 
   return (
-    <div className={`relative group rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 ${
+    <div className={`group relative flex flex-col h-full rounded-2xl transition-all duration-300 hover:-translate-y-1 ${
       isVip 
-        ? 'bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/20 hover:border-amber-500/50 hover:shadow-[0_0_25px_rgba(245,158,11,0.1)]' 
-        : 'bg-slate-900 border border-slate-800 hover:border-emerald-500/30 hover:shadow-[0_0_25px_rgba(16,185,129,0.1)]'
+        ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/20 border border-amber-500/20 hover:border-amber-500/40 shadow-lg shadow-black/40' 
+        : 'bg-slate-900/60 backdrop-blur-md border border-white/5 hover:border-emerald-500/30 shadow-lg shadow-black/20'
     }`}>
+      
+      {/* VIP Badge */}
       {isVip && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[10px] font-black tracking-wider uppercase px-3 py-1 rounded-full flex items-center gap-1 shadow-lg ring-4 ring-slate-950">
-          <TrendingUp size={10} strokeWidth={3} /> Premium Pick
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+           <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full shadow-[0_4px_12px_rgba(245,158,11,0.4)] flex items-center gap-1 border border-white/20">
+             <TrendingUp size={10} strokeWidth={3} /> Premium
+           </div>
         </div>
       )}
 
-      {/* Header: League & Time */}
-      <div className="flex justify-between items-start mb-6">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-          {prediction.league}
-        </span>
-        <span className="text-xs text-slate-400 flex items-center gap-1.5 bg-slate-800/50 px-2.5 py-1 rounded-full border border-slate-800">
-          <Clock size={12} /> {prediction.kickoffTime}
-        </span>
-      </div>
-
-      {/* Teams */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex-1 text-center group-hover:scale-105 transition-transform duration-300">
-          <div className="w-14 h-14 mx-auto bg-slate-800 rounded-2xl flex items-center justify-center mb-3 text-xl font-bold text-slate-300 shadow-inner ring-1 ring-white/5">
-            {prediction.homeTeam.charAt(0)}
-          </div>
-          <h3 className="text-sm font-bold text-slate-200 leading-tight px-1">{prediction.homeTeam}</h3>
+      {/* Card Header: League & Time */}
+      <div className="flex justify-between items-center px-5 py-4 border-b border-white/5">
+        <div className="flex items-center gap-2">
+           <div className={`w-1 h-4 rounded-full ${isVip ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[120px]" title={prediction.league}>
+             {prediction.league}
+           </span>
         </div>
-        <div className="px-2 text-slate-600 flex flex-col items-center">
-            <span className="text-[10px] text-slate-600 font-medium mb-1">VS</span>
-          <div className="bg-slate-800 rounded-full p-1.5">
-            <ArrowRight size={14} className="text-slate-500" />
-          </div>
-        </div>
-        <div className="flex-1 text-center group-hover:scale-105 transition-transform duration-300">
-          <div className="w-14 h-14 mx-auto bg-slate-800 rounded-2xl flex items-center justify-center mb-3 text-xl font-bold text-slate-300 shadow-inner ring-1 ring-white/5">
-            {prediction.awayTeam.charAt(0)}
-          </div>
-          <h3 className="text-sm font-bold text-slate-200 leading-tight px-1">{prediction.awayTeam}</h3>
+        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-black/20 px-2 py-1 rounded-md">
+           <Clock size={12} />
+           <span>{prediction.kickoffTime}</span>
         </div>
       </div>
 
-      {/* Prediction Box */}
-      <div className={`rounded-2xl p-4 mb-5 text-center backdrop-blur-sm ${isVip ? 'bg-amber-500/5 border border-amber-500/10' : 'bg-emerald-500/5 border border-emerald-500/10'}`}>
-        <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5 font-medium">Recommended Bet</p>
-        <div className={`text-lg font-black mb-2 ${isVip ? 'text-amber-100' : 'text-emerald-50'}`}>{prediction.prediction}</div>
-        <div className="flex justify-center items-center gap-2">
-            <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${isVip ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'}`}>
-                {prediction.odds.toFixed(2)}
-            </span>
-             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide ${getRiskColor(prediction.riskLevel)}`}>
+      {/* Teams Grid */}
+      <div className="px-5 py-6">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 mb-6">
+          {/* Home Team */}
+          <div className="flex flex-col items-center gap-2 text-center group-hover:scale-105 transition-transform duration-300">
+             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/5 flex items-center justify-center shadow-inner">
+               <span className="text-lg font-bold text-slate-300">{prediction.homeTeam.charAt(0)}</span>
+             </div>
+             <span className="text-xs font-bold text-slate-200 leading-tight line-clamp-2 h-8 flex items-center justify-center">
+               {prediction.homeTeam}
+             </span>
+          </div>
+
+          {/* VS Divider */}
+          <div className="flex flex-col items-center justify-center gap-1">
+             <span className="text-[10px] font-black text-slate-600 tracking-wider">VS</span>
+             <div className="h-8 w-[1px] bg-gradient-to-b from-transparent via-slate-700 to-transparent"></div>
+          </div>
+
+          {/* Away Team */}
+          <div className="flex flex-col items-center gap-2 text-center group-hover:scale-105 transition-transform duration-300">
+             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/5 flex items-center justify-center shadow-inner">
+               <span className="text-lg font-bold text-slate-300">{prediction.awayTeam.charAt(0)}</span>
+             </div>
+             <span className="text-xs font-bold text-slate-200 leading-tight line-clamp-2 h-8 flex items-center justify-center">
+               {prediction.awayTeam}
+             </span>
+          </div>
+        </div>
+
+        {/* Prediction Main Block */}
+        <div className="relative overflow-hidden rounded-xl bg-slate-950/50 border border-white/5 p-4 mb-4 text-center">
+           <div className={`absolute top-0 left-0 w-1 h-full ${isVip ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+           <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+             <Target size={12} /> AI Prediction
+           </p>
+           <div className={`text-base font-black ${isVip ? 'text-amber-100' : 'text-emerald-50'} mb-2`}>
+             {prediction.prediction}
+           </div>
+           
+           <div className="flex justify-center items-center gap-2">
+             <span className={`inline-flex items-center justify-center px-3 py-1 rounded-lg text-sm font-mono font-bold bg-white/5 border border-white/5 ${isVip ? 'text-amber-400' : 'text-emerald-400'}`}>
+                @{prediction.odds.toFixed(2)}
+             </span>
+             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold text-slate-400 uppercase">
+                {getRiskIcon(prediction.riskLevel)}
                 {prediction.riskLevel}
-            </span>
+             </span>
+           </div>
         </div>
-      </div>
 
-      {/* Analysis & Confidence */}
-      <div>
-        <div className="flex justify-between items-center mb-2">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">AI Probability</span>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${getConfidenceColor(prediction.confidence)}`}>
-                {prediction.confidence}%
-            </span>
+        {/* Confidence & Analysis */}
+        <div className="space-y-3">
+           <div className="flex justify-between items-end">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">Confidence Model</span>
+              <span className={`text-xs font-bold ${confidenceColor}`}>{prediction.confidence}%</span>
+           </div>
+           
+           <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+             <div 
+               className={`h-full rounded-full ${confidenceBg} shadow-[0_0_10px_currentColor] transition-all duration-1000 ease-out`}
+               style={{ width: `${prediction.confidence}%`, opacity: 0.8 }}
+             ></div>
+           </div>
+
+           <p className="text-[11px] leading-relaxed text-slate-400 line-clamp-2 min-h-[2.5em] pl-2 border-l-2 border-slate-800">
+              {prediction.analysis}
+           </p>
         </div>
-        <div className="w-full bg-slate-800/50 rounded-full h-1.5 mb-4 overflow-hidden">
-            <div 
-                className={`h-full rounded-full transition-all duration-1000 ease-out ${isVip ? 'bg-gradient-to-r from-amber-600 to-amber-400' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'}`} 
-                style={{ width: `${prediction.confidence}%` }}
-            ></div>
-        </div>
-        
-        <p className="text-xs text-slate-400 leading-relaxed border-l-2 border-slate-700/50 pl-3">
-          {prediction.analysis}
-        </p>
       </div>
     </div>
   );

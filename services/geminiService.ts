@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const fetchPredictions = async (type: SectionType, count: number = 4, market: string = "Any"): Promise<PredictionResponse> => {
+export const fetchPredictions = async (type: SectionType, count: number = 20, market: string = "Any"): Promise<PredictionResponse> => {
   const model = "gemini-2.5-flash";
 
   const now = new Date();
@@ -22,12 +22,19 @@ export const fetchPredictions = async (type: SectionType, count: number = 4, mar
   const systemInstruction = isVip 
     ? `Role: Elite Sports Data Scientist. Methodology: Rigorous, risk-averse.
        Protocol:
-       1. DATE CHECK: STRICTLY TODAY (${dateString}) ONLY. Reject tomorrow's/yesterday's games.
-       2. TIME CHECK: REJECT if match started/finished. Upcoming only.
-       3. ANALYZE: Form, H2H, Injuries (WAR), Motivation, xG Regression.
-       4. FILTER: Select ONLY matches with AI Confidence > 85%.
+       1. TIME CRITICAL: Check Current Time (${timeString}).
+       2. FILTER: REJECT ANY match that has already started or finished.
+       3. SELECT: Only matches starting AFTER ${timeString}.
+       4. ANALYZE: Form, H2H, Injuries (WAR), Motivation, xG Regression.
+       5. FILTER: Select ONLY matches with AI Confidence > 85%.
+       6. IF NO MATCHES LEFT: Return empty array [].
        Output: Calculated, high-confidence data.`
-    : `Role: Conservative football analyst. Goal: Safety on UPCOMING matches for TODAY (${dateString}) only. Ignore played games. Confidence must be > 80%.`;
+    : `Role: Conservative football analyst.
+       Protocol:
+       1. Current Time: ${timeString}.
+       2. REJECT matches that have started. Keep UPCOMING only.
+       3. Goal: Safety on UPCOMING matches for TODAY (${dateString}) only.
+       4. If all matches played, return empty array.`;
 
   let constraints = "";
   if (isVip) {
@@ -67,16 +74,18 @@ export const fetchPredictions = async (type: SectionType, count: number = 4, mar
 
   // Optimized Prompt (Token Efficient)
   const prompt = `
-  Context: Today is ${dateString}, Current Time: ${timeString} (${userTimezone})
+  Context: Today is ${dateString}, Current Time is ${timeString} (${userTimezone}).
 
   Task:
   1. Search "https://www.flashscore.com.gh/", "https://radyolisten.cc/correct-score2", "https://onemillionpredictions.com/", "https://primatips.com/tips". Find today's schedule.
-  2. DATE FILTER: Keep ONLY matches scheduled for TODAY (${dateString}). Exclude tomorrow's games.
-  3. TIME FILTER: Compare Kickoff vs ${timeString}. REJECT finished/live matches.
-  4. Select ${safeCount} UPCOMING matches for TODAY.
-  5. ANALYZE: Form, H2H, Trends, Injuries, Morale.
-  6. Market: ${constraints}
-  7. SCORING: Assign AI Confidence between 85 and 99.
+  2. TIME FILTER (CRITICAL): Compare every match Kickoff Time against Current Time (${timeString}).
+  3. EXCLUDE matches that are currently playing or finished.
+  4. KEEP ONLY matches starting AFTER ${timeString}.
+  5. If NO matches remain after filtering, return an empty array for "predictions".
+  6. Select the best ${safeCount} UPCOMING matches based on highest confidence and safety.
+  7. ANALYZE: Form, H2H, Trends, Injuries, Morale.
+  8. Market: ${constraints}
+  9. SCORING: Assign AI Confidence between 85 and 99.
 
   Output JSON ONLY:
   {
@@ -89,7 +98,7 @@ export const fetchPredictions = async (type: SectionType, count: number = 4, mar
         "odds": number,
         "confidence": number (85-99),
         "analysis": "concise reasoning",
-        "kickoffTime": "HH:MM",
+        "kickoffTime": "HH:MM (24h format)",
         "riskLevel": "Low"|"Medium"|"High"
       }
     ]
@@ -127,7 +136,32 @@ export const fetchPredictions = async (type: SectionType, count: number = 4, mar
         }
       }
 
-      // 2. Extract Sources
+      // 2. CLIENT-SIDE TIME FILTER (Safety Net)
+      // Filter out matches that the AI might have hallucinated as upcoming but are actually passed
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      
+      predictions = predictions.filter((p: any) => {
+        try {
+            // Assumes kickoffTime is "HH:MM"
+            if (!p.kickoffTime || !p.kickoffTime.includes(':')) return true; // Keep if format unknown
+            
+            const [hStr, mStr] = p.kickoffTime.split(':');
+            const h = parseInt(hStr, 10);
+            const m = parseInt(mStr, 10);
+            
+            // If match hour is less than current hour, it's passed.
+            if (h < currentHours) return false;
+            // If match hour is same but minutes are passed.
+            if (h === currentHours && m < currentMinutes) return false;
+            
+            return true;
+        } catch (e) {
+            return true; // If parsing fails, default to showing it
+        }
+      });
+
+      // 3. Extract Sources
       const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
         ?.map((chunk: any) => {
           if (chunk.web) {

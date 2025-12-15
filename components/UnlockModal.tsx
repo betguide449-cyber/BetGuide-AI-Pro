@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, MessageCircle, CreditCard, Smartphone } from 'lucide-react';
+import { X, Copy, Check, MessageCircle, CreditCard, Smartphone, CheckCircle } from 'lucide-react';
 
 interface UnlockModalProps {
   onClose: () => void;
@@ -16,93 +16,89 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+      <div className="bg-slate-950 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-white/10">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white relative">
-          <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-1 transition">
-            <X size={20} />
-          </button>
-          <h3 className="text-xl font-bold flex items-center gap-2">
-             🔑 Get VIP Unlock Code
-          </h3>
-          <p className="text-emerald-100 text-sm mt-1">Unlock unlimited high-confidence predictions.</p>
+        <div className="relative bg-gradient-to-br from-slate-900 to-slate-950 p-8 border-b border-slate-800">
+           <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 p-2 rounded-full transition-all">
+             <X size={20} />
+           </button>
+           <h3 className="text-2xl font-black text-white mb-2">
+              Unlock <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">VIP Access</span>
+           </h3>
+           <p className="text-slate-400 text-sm">Choose a package to get your instant access code.</p>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-8 space-y-8">
           
-          {/* Packages */}
+          {/* Pricing Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { price: "$2 / 20GH", count: "50", color: "from-blue-500 to-cyan-500" },
+              { price: "$10 / 120GH", count: "100", color: "from-emerald-500 to-teal-500", recommended: true },
+              { price: "$25 / 300GH", count: "350", color: "from-purple-500 to-indigo-500" }
+            ].map((pkg) => (
+              <a 
+                key={pkg.count}
+                href={`https://wa.me/233536635799?text=Hello,+I+paid+${pkg.price}+for+${pkg.count}+Predictions`}
+                target="_blank"
+                rel="noreferrer"
+                className={`relative group flex flex-col items-center p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${pkg.recommended ? 'bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/10' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}
+              >
+                {pkg.recommended && (
+                  <span className="absolute -top-3 bg-emerald-500 text-slate-950 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Best Value</span>
+                )}
+                <span className={`text-lg font-bold mb-1 ${pkg.recommended ? 'text-emerald-400' : 'text-white'}`}>{pkg.price}</span>
+                <span className="text-xs text-slate-500 font-medium group-hover:text-slate-300">{pkg.count} Predictions</span>
+              </a>
+            ))}
+          </div>
+
+          {/* Payment Method */}
           <div>
-            <h4 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">Select Package</h4>
-            <div className="grid grid-cols-3 gap-3">
-              <a 
-                href={`https://wa.me/233536635799?text=Hello,+I+paid+$2/20GH+for+50+Predictions,+please+send+my+VIP+unlock+code`}
-                target="_blank"
-                rel="noreferrer"
-                className="bg-slate-800 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-slate-700 rounded-lg p-3 text-center transition-all cursor-pointer group"
-              >
-                <div className="text-white font-bold">$2 / 20GH</div>
-                <div className="text-slate-500 group-hover:text-emerald-400 text-[10px] font-medium">50 Predictions</div>
-              </a>
-              <a 
-                href={`https://wa.me/233536635799?text=Hello,+I+paid+$10/120GH+for+100+Predictions,+please+send+my+VIP+unlock+code`}
-                target="_blank"
-                rel="noreferrer"
-                className="bg-slate-800 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-slate-700 rounded-lg p-3 text-center transition-all cursor-pointer group"
-              >
-                <div className="text-white font-bold">$10 / 120GH</div>
-                <div className="text-slate-500 group-hover:text-emerald-400 text-[10px] font-medium">100 Predictions</div>
-              </a>
-              <a 
-                href={`https://wa.me/233536635799?text=Hello,+I+paid+$25/300GH+for+350+Predictions,+please+send+my+VIP+unlock+code`}
-                target="_blank"
-                rel="noreferrer"
-                className="bg-slate-800 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-slate-700 rounded-lg p-3 text-center transition-all cursor-pointer group"
-              >
-                <div className="text-white font-bold">$25 / 300GH</div>
-                <div className="text-slate-500 group-hover:text-emerald-400 text-[10px] font-medium">350 Predictions</div>
-              </a>
-            </div>
-          </div>
-
-          {/* Payment Methods */}
-          <div className="space-y-4">
-             <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-               <div className="flex items-center gap-2 mb-2 text-white font-medium">
-                 <Smartphone size={18} className="text-amber-400" />
-                 <span>Mobile Money (Ghana Only)</span>
-               </div>
-               <div className="flex items-center justify-between bg-slate-900 rounded-lg p-3 border border-slate-800">
-                 <span className="font-mono text-lg text-slate-300 tracking-wide">{momoNumber}</span>
-                 <button 
-                   onClick={handleCopy}
-                   className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-md transition-colors"
-                 >
-                   {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                 </button>
-               </div>
-               <p className="text-xs text-slate-500 mt-2">Send payment via MTN MoMo and send screenshot via WhatsApp.</p>
+             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">How to Pay</h4>
+             <div className="bg-slate-900 rounded-2xl p-1 border border-slate-800">
+                <div className="flex items-center gap-4 p-4 border-b border-slate-800/50">
+                   <div className="bg-amber-500/20 p-2 rounded-lg">
+                      <Smartphone size={20} className="text-amber-500" />
+                   </div>
+                   <div className="flex-1">
+                      <div className="text-sm font-bold text-slate-200">Mobile Money (MTN)</div>
+                      <div className="text-xs text-slate-500">Tap copy icon to copy number</div>
+                   </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-black/20 rounded-xl m-2">
+                   <span className="font-mono text-lg font-bold text-emerald-400 tracking-wider">{momoNumber}</span>
+                   <button 
+                     onClick={handleCopy}
+                     className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-colors"
+                   >
+                     {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                     {copied ? 'Copied' : 'Copy'}
+                   </button>
+                </div>
              </div>
-
-             <a href="#" className="flex items-center justify-center gap-2 w-full p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors border border-slate-700">
-                <CreditCard size={18} />
-                <span>Pay with Visa Card</span>
-             </a>
           </div>
 
-          {/* WhatsApp Button */}
-          <a 
-            href="https://wa.me/233536635799?text=Hello,+I+want+my+VIP+unlock+code" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full p-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl font-bold transition-colors shadow-lg shadow-emerald-900/20"
-          >
-            <MessageCircle size={20} fill="currentColor" />
-            <span>Send Proof on WhatsApp</span>
-          </a>
-
+          {/* Action Buttons */}
+          <div className="space-y-3">
+             <a 
+               href="https://wa.me/233536635799?text=Hello,+I+have+sent+payment,+please+give+me+code" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="flex items-center justify-center gap-2 w-full p-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+             >
+               <MessageCircle size={18} fill="currentColor" />
+               <span>Send Payment Proof on WhatsApp</span>
+             </a>
+             
+             <button className="flex items-center justify-center gap-2 w-full p-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-sm transition-colors border border-slate-700">
+               <CreditCard size={18} />
+               <span>Pay via Card (Coming Soon)</span>
+             </button>
+          </div>
         </div>
       </div>
     </div>

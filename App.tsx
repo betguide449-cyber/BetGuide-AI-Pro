@@ -3,7 +3,7 @@ import Layout from './components/Layout';
 import PredictionCard from './components/PredictionCard';
 import { SectionType, Prediction, UserPremiumStatus } from './types';
 import { fetchPredictions } from './services/geminiService';
-import { Loader2, RefreshCcw, AlertCircle, Hash, Filter, Lock, Clock, Calendar, Crown, ArrowRight, Zap, Target, TrendingUp, Info, Unlock, CheckCircle, Send, MessageCircle, ShieldCheck, History } from 'lucide-react';
+import { Loader2, RefreshCcw, AlertCircle, Hash, Filter, Lock, Clock, Calendar, Crown, Send, MessageCircle, ShieldCheck, History, Unlock, Zap, ChevronRight, Check } from 'lucide-react';
 import AdminPanel from './components/AdminPanel';
 import UnlockModal from './components/UnlockModal';
 
@@ -16,14 +16,14 @@ declare global {
 
 const STORAGE_KEY_FREE_DATE = 'betGuide_free_date';
 const STORAGE_KEY_FREE_DATA = 'betGuide_free_data';
-const STORAGE_KEY_VIP_USAGE = 'betGuide_vip_usage'; // Tracks count
-const STORAGE_KEY_VIP_HISTORY = 'betGuide_vip_history'; // Tracks actual data
+const STORAGE_KEY_VIP_USAGE = 'betGuide_vip_usage'; 
+const STORAGE_KEY_VIP_HISTORY = 'betGuide_vip_history'; 
 const PREMIUM_KEY = 'premium_v6';
 const DEVICE_ID_KEY = 'deviceId_v6';
 
 // Constants
-const FREE_USER_LIMIT = 4;
-const VIP_DAILY_LIMIT = 30; // New Daily Limit for VIP
+const FREE_USER_LIMIT = 6;
+const VIP_DAILY_LIMIT = 30;
 const ADMIN_MASTER_CODE = "SUPERVIP2025";
 const ADMIN_CONFIRM_CODE = "@admin1234!";
 
@@ -40,7 +40,6 @@ const App: React.FC = () => {
   const [hasVipHistory, setHasVipHistory] = useState<boolean>(false);
   
   // Logic States
-  // Initialize freeLimitReached directly from storage to prevent flicker
   const [freeLimitReached, setFreeLimitReached] = useState<boolean>(() => {
     const today = new Date().toDateString();
     const storedDate = localStorage.getItem(STORAGE_KEY_FREE_DATE);
@@ -48,8 +47,8 @@ const App: React.FC = () => {
     return storedDate === today && !!storedData;
   });
 
-  const [vipLimitReached, setVipLimitReached] = useState<boolean>(false); // Track VIP daily limit
-  const [vipDailyCount, setVipDailyCount] = useState<number>(0); // Track current VIP usage
+  const [vipLimitReached, setVipLimitReached] = useState<boolean>(false);
+  const [vipDailyCount, setVipDailyCount] = useState<number>(0);
   const [currentDate, setCurrentDate] = useState<string>("");
   
   // Auth & Unlock States
@@ -63,18 +62,15 @@ const App: React.FC = () => {
   // Firebase ref
   const firebaseDbRef = useRef<any>(null);
 
-  // Initialize Firebase and User Data
   useEffect(() => {
-    // 1. Date Clock
     const updateDate = () => {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
       setCurrentDate(now.toLocaleDateString('en-US', options));
     };
     updateDate();
     const timer = setInterval(updateDate, 60000);
 
-    // 2. Initialize Firebase
     if (window.firebase && !firebaseDbRef.current) {
       try {
         const firebaseConfig = {
@@ -86,7 +82,6 @@ const App: React.FC = () => {
           messagingSenderId: "275877251235",
           appId: "1:275877251235:web:deb982eda6f3688bded716"
         };
-        // Check if already initialized
         if (!window.firebase.apps.length) {
             window.firebase.initializeApp(firebaseConfig);
         }
@@ -96,7 +91,6 @@ const App: React.FC = () => {
       }
     }
 
-    // 3. Load Premium Status from LocalStorage
     const storedPremium = localStorage.getItem(PREMIUM_KEY);
     if (storedPremium) {
       try {
@@ -111,11 +105,8 @@ const App: React.FC = () => {
       } catch(e) {}
     }
 
-    // 4. Load VIP Daily Usage & History Status
     const loadVipData = () => {
       const today = new Date().toDateString();
-      
-      // Check Usage Count
       const storedUsage = localStorage.getItem(STORAGE_KEY_VIP_USAGE);
       if (storedUsage) {
         try {
@@ -124,7 +115,6 @@ const App: React.FC = () => {
             setVipDailyCount(parsed.count);
             if (parsed.count >= VIP_DAILY_LIMIT) setVipLimitReached(true);
           } else {
-            // New day, reset usage
             setVipDailyCount(0);
             setVipLimitReached(false);
             localStorage.removeItem(STORAGE_KEY_VIP_USAGE);
@@ -132,7 +122,6 @@ const App: React.FC = () => {
         } catch(e) { setVipDailyCount(0); }
       }
 
-      // Check History Existence
       const storedHistory = localStorage.getItem(STORAGE_KEY_VIP_HISTORY);
       if (storedHistory) {
         try {
@@ -140,7 +129,6 @@ const App: React.FC = () => {
           if (parsed.date === today && parsed.predictions && parsed.predictions.length > 0) {
             setHasVipHistory(true);
           } else {
-             // New day, clear history
              localStorage.removeItem(STORAGE_KEY_VIP_HISTORY);
              setHasVipHistory(false);
           }
@@ -152,7 +140,6 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Helper: Device ID
   const getDeviceId = () => {
     let id = localStorage.getItem(DEVICE_ID_KEY);
     if (!id) {
@@ -162,30 +149,19 @@ const App: React.FC = () => {
     return id;
   };
 
-  // --- Code Verification Logic ---
-
   const handleUnlockCode = async () => {
     if (!codeEntry.trim() || !firebaseDbRef.current) return;
-
-    // Check for Admin Master Code
     if (codeEntry.trim() === ADMIN_MASTER_CODE) {
       setShowAdminConfirm(true);
       return;
     }
 
-    // Check Firebase for VIP Code
     try {
       const snapshot = await firebaseDbRef.current.ref(`codes/${codeEntry.trim()}`).once('value');
       const codeData = snapshot.val();
 
-      if (!codeData) {
-        alert("❌ Invalid code.");
-        return;
-      }
-      if (!codeData.active) {
-        alert("❌ Code is inactive.");
-        return;
-      }
+      if (!codeData) { alert("❌ Invalid code."); return; }
+      if (!codeData.active) { alert("❌ Code is inactive."); return; }
 
       const deviceId = getDeviceId();
       if (codeData.assignedTo && codeData.assignedTo !== deviceId) {
@@ -194,15 +170,10 @@ const App: React.FC = () => {
       }
 
       const remaining = codeData.predictions - (codeData.usedPredictions || 0);
-      if (remaining <= 0) {
-        alert("❌ Code has exhausted its predictions.");
-        return;
-      }
+      if (remaining <= 0) { alert("❌ Code has exhausted its predictions."); return; }
 
-      // Valid Code: Bind to device
       await firebaseDbRef.current.ref(`codes/${codeEntry.trim()}`).update({ assignedTo: deviceId });
 
-      // Save Local State
       const newStatus: UserPremiumStatus = {
         role: 'vip',
         code: codeEntry.trim(),
@@ -211,7 +182,6 @@ const App: React.FC = () => {
       };
       setPremiumStatus(newStatus);
       localStorage.setItem(PREMIUM_KEY, JSON.stringify(newStatus));
-      
       setActiveSection(SectionType.VIP);
       setCodeEntry('');
       alert(`✅ Code Accepted! You have ${remaining} VIP predictions.`);
@@ -246,24 +216,18 @@ const App: React.FC = () => {
     setPredictions([]);
   };
 
-  // --- Prediction Logic ---
-
   const loadPredictions = useCallback(async (type: SectionType, count: number, market: string, forceRefresh: boolean = false) => {
     setError(null);
     
-    // Prevent free users from fetching VIP
     if (type === SectionType.VIP && premiumStatus.role === 'free') {
-        setPredictions([]);
-        return; 
+        setPredictions([]); return; 
     }
 
-    // FREE SECTION LOGIC: Check LocalStorage Cache
     if (type === SectionType.FREE) {
         const today = new Date().toDateString();
         const storedDate = localStorage.getItem(STORAGE_KEY_FREE_DATE);
         const storedData = localStorage.getItem(STORAGE_KEY_FREE_DATA);
 
-        // If data exists for today, load it and STOP.
         if (storedDate === today && storedData && !forceRefresh) {
             setPredictions(JSON.parse(storedData));
             setFreeLimitReached(true);
@@ -273,7 +237,6 @@ const App: React.FC = () => {
         }
     }
 
-    // VIP SECTION LOGIC: Check Daily Limit
     if (type === SectionType.VIP && premiumStatus.role === 'vip') {
         const today = new Date().toDateString();
         const storedVip = localStorage.getItem(STORAGE_KEY_VIP_USAGE);
@@ -281,9 +244,7 @@ const App: React.FC = () => {
         
         if (storedVip) {
             const parsed = JSON.parse(storedVip);
-            if (parsed.date === today) {
-                currentCount = parsed.count;
-            }
+            if (parsed.date === today) currentCount = parsed.count;
         }
 
         if (currentCount >= VIP_DAILY_LIMIT) {
@@ -291,10 +252,8 @@ const App: React.FC = () => {
             setVipLimitReached(true);
             return;
         }
-
         if (currentCount + count > VIP_DAILY_LIMIT) {
-             const remaining = VIP_DAILY_LIMIT - currentCount;
-             alert(`⚠️ You only have ${remaining} predictions left for today.`);
+             alert(`⚠️ You only have ${VIP_DAILY_LIMIT - currentCount} predictions left for today.`);
              return;
         }
     }
@@ -304,27 +263,32 @@ const App: React.FC = () => {
     setHasSearched(true);
     
     try {
-      // Logic for VIP Code Consumption (Total Pool)
       if (type === SectionType.VIP && premiumStatus.role === 'vip' && premiumStatus.code) {
-        // Decrease usage count in Firebase
          if (firebaseDbRef.current) {
             const codeRef = firebaseDbRef.current.ref(`codes/${premiumStatus.code}`);
             const snapshot = await codeRef.once('value');
             const data = snapshot.val();
+            
+            if (!data) {
+                 setLoading(false);
+                 setPremiumStatus({ role: 'free' });
+                 localStorage.setItem(PREMIUM_KEY, JSON.stringify({ role: 'free' }));
+                 setActiveSection(SectionType.FREE);
+                 alert("Session expired or code invalid.");
+                 return;
+            }
+
             const currentUsed = data.usedPredictions || 0;
             const total = data.predictions || 0;
             
-            // Update usage
             await codeRef.update({ usedPredictions: currentUsed + count });
             
-            // Update local state
             const newLeft = Math.max(0, (total - (currentUsed + count)));
             const newStatus = { ...premiumStatus, predictionsLeft: newLeft };
             setPremiumStatus(newStatus);
             localStorage.setItem(PREMIUM_KEY, JSON.stringify(newStatus));
          }
 
-         // Update VIP Daily Usage LocalStorage
          const today = new Date().toDateString();
          const storedVip = localStorage.getItem(STORAGE_KEY_VIP_USAGE);
          let currentCount = 0;
@@ -340,7 +304,6 @@ const App: React.FC = () => {
 
       const data = await fetchPredictions(type, count, market);
       
-      // Save Free Predictions to Cache
       if (type === SectionType.FREE && data.predictions.length > 0) {
           const today = new Date().toDateString();
           localStorage.setItem(STORAGE_KEY_FREE_DATE, today);
@@ -348,7 +311,6 @@ const App: React.FC = () => {
           setFreeLimitReached(true);
       }
 
-      // Save VIP Predictions to Daily History Cache
       if (type === SectionType.VIP && data.predictions.length > 0) {
         const today = new Date().toDateString();
         const storedHistory = localStorage.getItem(STORAGE_KEY_VIP_HISTORY);
@@ -356,9 +318,7 @@ const App: React.FC = () => {
         
         if (storedHistory) {
            const parsed = JSON.parse(storedHistory);
-           if (parsed.date === today) {
-              existingHistory = parsed.predictions;
-           }
+           if (parsed.date === today) existingHistory = parsed.predictions;
         }
         
         const updatedHistory = [...existingHistory, ...data.predictions];
@@ -375,7 +335,7 @@ const App: React.FC = () => {
       console.error(err);
       let msg = "Failed to load predictions. Please try again.";
       if (err.message && (err.message.includes('Quota') || err.message.includes('Limit') || err.message.includes('429'))) {
-          msg = err.message; // Use the specific error from service
+          msg = err.message;
       }
       setError(msg);
     } finally {
@@ -383,37 +343,27 @@ const App: React.FC = () => {
     }
   }, [premiumStatus]);
 
-  // Initial load logic - Controlled by Section Switch
   useEffect(() => {
-    // Reset search state on section switch
     setHasSearched(false);
-
     if (activeSection === SectionType.FREE) {
-        // Automatically load for Free section (will hit cache if exists)
         loadPredictions(SectionType.FREE, FREE_USER_LIMIT, "Any");
     } else {
-        // For VIP, DO NOT auto-load. 
         setPredictions([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection]); 
+  }, [activeSection, loadPredictions]); 
 
   const handleRefresh = () => {
-    // Free User cannot refresh manually if limit reached
-    if (activeSection === SectionType.FREE && freeLimitReached) {
-        return; 
-    }
+    if (activeSection === SectionType.FREE && freeLimitReached) return;
     
-    // VIP Check
     if (activeSection === SectionType.VIP && premiumStatus.role === 'vip') {
         if (vipLimitReached) {
-            alert(`⚠️ VIP Daily Limit Reached (${VIP_DAILY_LIMIT}/Day). Resets at 12:00 AM.`);
+            alert(`⚠️ VIP Daily Limit Reached. Resets at 12:00 AM.`);
             return;
         }
         
         const countVal = typeof predictionCount === 'number' ? predictionCount : 6;
         if ((premiumStatus.predictionsLeft || 0) < countVal) {
-            alert("❌ Not enough predictions left in your code total. Please top up.");
+            alert("❌ Not enough predictions left in your code total.");
             setShowUnlockModal(true);
             return;
         }
@@ -446,33 +396,23 @@ const App: React.FC = () => {
 
   const handleCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    if (val === '') {
-      setPredictionCount('');
-      return;
-    }
+    if (val === '') { setPredictionCount(''); return; }
     const parsed = parseInt(val);
-    if (!isNaN(parsed)) {
-      setPredictionCount(parsed);
-    }
+    if (!isNaN(parsed)) setPredictionCount(parsed);
   };
 
   const handleCountBlur = () => {
     let val = typeof predictionCount === 'number' ? predictionCount : 6;
     if (val < 1) val = 1;
-    // Set Max to 30 for daily limit logic
     if (val > VIP_DAILY_LIMIT) val = VIP_DAILY_LIMIT;
     
-    // Cap at remaining limits for VIP (Total Code Limit)
     if (premiumStatus.role === 'vip' && premiumStatus.predictionsLeft !== undefined) {
          if (val > premiumStatus.predictionsLeft) val = premiumStatus.predictionsLeft;
     }
-    
-    // Cap at remaining Daily Limit
     if (premiumStatus.role === 'vip') {
         const remainingDaily = VIP_DAILY_LIMIT - vipDailyCount;
         if (val > remainingDaily) val = remainingDaily;
     }
-
     setPredictionCount(val);
   };
 
@@ -481,338 +421,259 @@ const App: React.FC = () => {
     return typeof predictionCount === 'number' ? predictionCount : 6;
   };
 
-  const renderConfigurationGuide = () => (
-    <div className="mt-5 p-6 bg-slate-900/40 rounded-xl border border-slate-800/60 max-w-2xl mx-auto shadow-xl text-left">
-       <div className="flex items-center gap-2 mb-4">
-         <Info size={16} className="text-amber-500" />
-         <span className="text-sm font-bold text-slate-300 uppercase tracking-wider">VIP Feature Guide</span>
-       </div>
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-         <div className="flex flex-col gap-2">
-           <span className="text-xs font-bold text-amber-500/90 flex items-center gap-2">
-             <Filter size={12} /> Market Selector
-           </span>
-           <p className="text-xs text-slate-400 leading-relaxed">
-             Direct the AI to hunt for specific high-value targets (e.g., 'Correct Score', 'HT/FT') or use <span className="text-slate-300 font-medium">Any Best Value</span> for the highest probability outcome across all markets.
-           </p>
-         </div>
-         <div className="flex flex-col gap-2">
-           <span className="text-xs font-bold text-amber-500/90 flex items-center gap-2">
-             <Hash size={12} /> Custom Match Count
-           </span>
-           <p className="text-xs text-slate-400 leading-relaxed">
-             You control the volume. Generate between 1 to {VIP_DAILY_LIMIT} deep-analysis predictions instantly to fit your betting strategy.
-           </p>
-         </div>
-       </div>
-    </div>
-  );
-
   return (
     <Layout activeSection={activeSection} onSectionChange={setActiveSection}>
       
-      {/* --- ADMIN CONFIRM MODAL --- */}
+      {/* --- MODALS --- */}
       {showAdminConfirm && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4">
-           <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm">
+           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm shadow-2xl">
               <h3 className="text-white font-bold mb-4">Admin Security</h3>
               <input 
                  type="password" 
                  placeholder="Enter admin key..." 
-                 className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white mb-4 outline-none focus:border-emerald-500"
+                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white mb-4 outline-none focus:border-emerald-500 transition-colors"
                  value={adminConfirmEntry}
                  onChange={e => setAdminConfirmEntry(e.target.value)}
               />
               <div className="flex gap-2">
-                 <button onClick={verifyAdminConfirm} className="flex-1 bg-emerald-600 text-white py-2 rounded hover:bg-emerald-500">Verify</button>
-                 <button onClick={() => {setShowAdminConfirm(false); setAdminConfirmEntry('');}} className="flex-1 bg-slate-800 text-slate-400 py-2 rounded hover:bg-slate-700">Cancel</button>
+                 <button onClick={verifyAdminConfirm} className="flex-1 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-500 font-medium">Verify</button>
+                 <button onClick={() => {setShowAdminConfirm(false); setAdminConfirmEntry('');}} className="flex-1 bg-slate-800 text-slate-400 py-2 rounded-lg hover:bg-slate-700 font-medium">Cancel</button>
               </div>
            </div>
         </div>
       )}
 
-      {/* --- UNLOCK MODAL --- */}
       {showUnlockModal && <UnlockModal onClose={() => setShowUnlockModal(false)} />}
 
-      {/* --- FLOATING BUTTONS --- */}
-      
-      {/* 2. WhatsApp (VIP LOCKED) - Only show if VIP/Admin */}
+      {/* --- FLOATING ACTIONS --- */}
       {premiumStatus.role !== 'free' && (
-        <a 
-          href="https://wa.me/233536635799"
-          target="_blank"
-          rel="noreferrer"
-          className="fixed bottom-24 right-6 z-[900] bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-[0_4px_14px_rgba(37,211,102,0.4)] transition-transform hover:-translate-y-1 flex items-center justify-center animate-in zoom-in duration-300"
-          title="VIP Support"
-        >
-          <MessageCircle size={24} />
+        <a href="https://wa.me/233536635799" target="_blank" rel="noreferrer" className="fixed bottom-24 right-6 z-[900] bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-[0_4px_14px_rgba(37,211,102,0.4)] transition-transform hover:-translate-y-1 flex items-center justify-center group" title="VIP Support">
+          <MessageCircle size={24} className="group-hover:scale-110 transition-transform"/>
         </a>
       )}
 
-      {/* 3. Get Unlock Code (Show if FREE) */}
       {premiumStatus.role === 'free' && (
-        <button 
-          onClick={() => setShowUnlockModal(true)}
-          className="fixed bottom-6 left-6 z-[900] bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-5 py-3 rounded-full shadow-[0_4px_14px_rgba(16,185,129,0.4)] font-bold flex items-center gap-2 hover:scale-105 transition-all"
-        >
-           <Unlock size={18} /> Get Unlock Code
+        <button onClick={() => setShowUnlockModal(true)} className="fixed bottom-6 right-6 z-[900] bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full shadow-[0_4px_20px_rgba(245,158,11,0.4)] font-bold flex items-center gap-2 hover:scale-105 transition-all border border-white/20">
+           <Crown size={18} fill="currentColor" /> <span>Upgrade to VIP</span>
         </button>
       )}
 
-
-      {/* --- HEADER: CODE ENTRY & STATUS --- */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800 mb-8 backdrop-blur-sm gap-4">
-        {/* Status Display */}
-        <div className="flex flex-wrap items-center gap-4 justify-center md:justify-start">
-          
-          {/* Telegram Button */}
-          <a 
-             href="tg://resolve?domain=Aibetgudie"
-             onClick={(e) => {
-                setTimeout(() => { window.open('https://t.me/Aibetgudie', '_blank'); }, 500);
-             }}
-             className="flex items-center gap-2 bg-[#0088cc] hover:bg-[#0077b3] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_2px_10px_rgba(0,136,204,0.3)]"
-          >
-             <Send size={14} />
-             Telegram
-          </a>
-
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs font-medium">
-             <Calendar size={12} className={premiumStatus.role !== 'free' ? "text-amber-500" : "text-emerald-500"} />
-             <span>{currentDate}</span>
-          </div>
-          <div className="text-sm">
-             <span className="text-slate-500 mr-1">Status:</span>
-             {premiumStatus.role === 'admin' ? (
-                <span className="text-amber-400 font-bold">SUPER VIP (Admin)</span>
-             ) : premiumStatus.role === 'vip' ? (
-                <span className="text-amber-400 font-bold flex flex-col md:flex-row md:items-center gap-1">
-                    <span>VIP ({premiumStatus.predictionsLeft} Total)</span>
-                    <span className="text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                        Today: {vipDailyCount} / {VIP_DAILY_LIMIT}
-                    </span>
-                </span>
-             ) : (
-                <span className="text-emerald-400 font-medium">Free User</span>
-             )}
-          </div>
+      {/* --- HEADER DASHBOARD --- */}
+      <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-4 mb-8 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-xl">
+        
+        {/* Left: Status & Date */}
+        <div className="flex items-center gap-4">
+           <div className="bg-slate-950/50 p-2 rounded-xl border border-white/5">
+              <Calendar size={18} className="text-slate-400" />
+           </div>
+           <div>
+              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Today's Date</div>
+              <div className="text-sm font-medium text-slate-200">{currentDate}</div>
+           </div>
+           <div className="h-8 w-px bg-white/10 mx-2 hidden md:block"></div>
+           <div className="hidden md:block">
+              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Your Status</div>
+              <div className={`text-sm font-bold flex items-center gap-2 ${premiumStatus.role !== 'free' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                 {premiumStatus.role === 'admin' ? 'Super Admin' : premiumStatus.role === 'vip' ? 'VIP Member' : 'Free Plan'}
+                 {premiumStatus.role === 'vip' && <span className="text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-300 border border-amber-500/20">{premiumStatus.predictionsLeft} Left</span>}
+              </div>
+           </div>
         </div>
 
-        {/* Code Input Area */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        {/* Right: Actions */}
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <a href="https://t.me/Aibetgudie" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#0088cc]/10 text-[#0088cc] hover:bg-[#0088cc]/20 rounded-lg text-sm font-bold transition-colors border border-[#0088cc]/20">
+             <Send size={14} /> <span className="hidden sm:inline">Join Telegram</span>
+          </a>
+
           {premiumStatus.role !== 'free' ? (
-             <button onClick={handleLogout} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                Logout / Reset
+             <button onClick={handleLogout} className="flex-1 lg:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-white/5">
+                Sign Out
              </button>
           ) : activeSection === SectionType.VIP && (
-            <>
-              <input 
-                type="text" 
-                placeholder="Enter Unlock Code..."
-                value={codeEntry}
-                onChange={e => setCodeEntry(e.target.value)}
-                className="bg-slate-950 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm outline-none focus:border-emerald-500 w-full md:w-48"
-              />
-              <button 
-                onClick={handleUnlockCode}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors"
-              >
-                Unlock
-              </button>
-            </>
+             <div className="flex w-full lg:w-auto gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Paste Code..."
+                  value={codeEntry}
+                  onChange={e => setCodeEntry(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm outline-none focus:border-emerald-500 placeholder-slate-600 transition-colors"
+                />
+                <button onClick={handleUnlockCode} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                  Unlock
+                </button>
+             </div>
           )}
         </div>
       </div>
 
-      {/* --- ADMIN PANEL --- */}
       {showAdminPanel && <AdminPanel firebaseDb={firebaseDbRef.current} />}
 
-
-      {/* ================= SECTION LOGIC ================= */}
-      
-      {/* CASE 1: FREE SECTION */}
+      {/* ================= FREE SECTION ================= */}
       {activeSection === SectionType.FREE && (
-         <div className="animate-in fade-in duration-500">
+         <div className="animate-in fade-in duration-500 slide-in-from-bottom-4">
              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                   <ShieldCheck className="text-emerald-500" />
-                   <span>Daily Free Tips</span>
-                   {freeLimitReached && <span className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded-full border border-slate-700">Limit Reached</span>}
+                <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                   <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                      <ShieldCheck size={20} className="text-emerald-500" />
+                   </div>
+                   Today's Free Picks
+                   <span className="text-[10px] font-bold bg-slate-800 text-slate-400 px-2 py-1 rounded-full border border-white/5 uppercase tracking-wide">
+                      Daily Top {FREE_USER_LIMIT}
+                   </span>
                 </h2>
                 
-                {freeLimitReached ? (
-                  <button disabled className="bg-slate-800/50 text-slate-500 px-4 py-2 rounded-lg text-sm font-medium border border-slate-800 cursor-not-allowed">
-                     Predictions Locked for Today
-                  </button>
-                ) : (
+                {!freeLimitReached && (
                   <button 
                     onClick={handleRefresh}
                     disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-600/20 rounded-lg text-sm font-medium transition-all"
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-500 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-900/20"
                   >
                      {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
-                     Refresh Tips
+                     Refresh
                   </button>
                 )}
              </div>
 
-             {/* Predictions Grid */}
+             {/* Grid */}
              {error ? (
-                <div className="flex flex-col items-center justify-center py-20 bg-slate-900/50 rounded-2xl border border-red-500/20">
-                    <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-                    <p className="text-slate-300 mb-4">{error}</p>
-                    <button onClick={() => loadPredictions(SectionType.FREE, FREE_USER_LIMIT, "Any", true)} className="px-6 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-full">Try Again</button>
+                <div className="flex flex-col items-center justify-center py-16 bg-red-500/5 rounded-2xl border border-red-500/10">
+                    <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
+                    <p className="text-red-200 mb-4 text-sm">{error}</p>
+                    <button onClick={() => loadPredictions(SectionType.FREE, FREE_USER_LIMIT, "Any", true)} className="px-5 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-sm font-bold">Retry Connection</button>
                 </div>
              ) : loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(FREE_USER_LIMIT)].map((_, i) => (
-                    <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-80 animate-pulse"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="bg-slate-900/50 border border-white/5 rounded-2xl h-64 animate-pulse"></div>
                   ))}
                 </div>
              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
                    {predictions.map((pred, index) => (
                       <PredictionCard key={`${pred.homeTeam}-${index}`} prediction={pred} type={SectionType.FREE} />
                    ))}
-                   {predictions.length === 0 && !loading && (
-                      <div className="col-span-full text-center py-20 text-slate-500">No free tips available at the moment.</div>
+                   {predictions.length === 0 && (
+                      <div className="col-span-full text-center py-20">
+                        <div className="inline-flex p-4 bg-slate-900 rounded-full mb-4 text-slate-600"><Clock size={32}/></div>
+                        <h3 className="text-slate-300 font-bold">No Matches Available</h3>
+                      </div>
                    )}
                 </div>
              )}
 
-             {/* VIP UPSELL BANNER (Visible only to Free users) */}
+             {/* Upsell Banner */}
              {premiumStatus.role === 'free' && (
-             <div className="relative rounded-3xl overflow-hidden mt-10 p-1 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600">
-                <div className="bg-slate-950 rounded-[22px] p-8 md:p-12 relative overflow-hidden">
-                    {/* Decor */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                <div className="mt-8 rounded-2xl p-[1px] bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 shadow-2xl shadow-amber-900/20">
+                   <div className="bg-slate-950 rounded-[15px] p-8 md:p-10 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+                      <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-500/20 rounded-full blur-[80px]"></div>
+                      
+                      <div className="relative z-10 text-center md:text-left">
+                          <h3 className="text-2xl font-black text-white italic tracking-tight mb-2">
+                             WANT <span className="text-amber-400">HIGHER ODDS?</span>
+                          </h3>
+                          <p className="text-slate-400 text-sm max-w-lg leading-relaxed mb-6">
+                             Unlock the <strong>VIP Lounge</strong> for Correct Scores, HT/FT, and 100% Analysis Confidence.
+                          </p>
+                          <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500/90 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+                                <Zap size={14} fill="currentColor"/> 90%+ Win Rate
+                             </div>
+                             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500/90 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+                                <Filter size={14} /> Custom Markets
+                             </div>
+                          </div>
+                      </div>
 
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                        <div className="text-center md:text-left max-w-2xl">
-                            <h3 className="text-2xl md:text-3xl font-black text-white mb-4 italic">
-                                UNLOCK <span className="text-amber-400">GOD MODE</span>
-                            </h3>
-                            <p className="text-slate-400 text-lg mb-6 leading-relaxed">
-                                Our VIP AI runs <strong className="text-white">6-Step Deep Analysis</strong> on every match.
-                                Unlock specific markets like <span className="text-amber-200">Correct Score</span>, <span className="text-amber-200">HT/FT</span>, and <span className="text-amber-200">Accumulators</span> with 95% accuracy confidence.
-                            </p>
-                            <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm font-medium text-slate-400">
-                                <span className="flex items-center gap-1"><CheckCircle size={16} className="text-emerald-500"/> Unlimited Predictions</span>
-                                <span className="flex items-center gap-1"><CheckCircle size={16} className="text-emerald-500"/> Custom Markets</span>
-                                <span className="flex items-center gap-1"><CheckCircle size={16} className="text-emerald-500"/> High Odds Targets</span>
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-center gap-4 min-w-[200px]">
-                            <button 
-                                onClick={() => setShowUnlockModal(true)}
-                                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black py-4 px-8 rounded-xl shadow-lg shadow-amber-500/20 transform hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Unlock size={20} />
-                                UNLOCK NOW
-                            </button>
-                            <p className="text-xs text-slate-500">Instant access code via WhatsApp</p>
-                        </div>
-                    </div>
+                      <button onClick={() => setShowUnlockModal(true)} className="relative z-10 whitespace-nowrap bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-8 py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
+                         UNLOCK VIP <ChevronRight size={20} strokeWidth={3} />
+                      </button>
+                   </div>
                 </div>
-             </div>
              )}
          </div>
       )}
 
 
-      {/* CASE 2: VIP SECTION (LOCKED) */}
+      {/* ================= VIP SECTION (LOCKED) ================= */}
       {activeSection === SectionType.VIP && premiumStatus.role === 'free' && (
-         <div className="text-center py-16 animate-in fade-in duration-500">
-             <div className="inline-flex items-center justify-center p-6 bg-slate-900 rounded-full mb-8 ring-1 ring-slate-800 shadow-2xl">
-               <Lock size={64} className="text-slate-700" />
+         <div className="flex flex-col items-center justify-center min-h-[50vh] animate-in fade-in zoom-in duration-500">
+             <div className="relative mb-8 group cursor-pointer" onClick={() => setShowUnlockModal(true)}>
+                <div className="absolute inset-0 bg-amber-500 rounded-full blur-[40px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                <div className="relative bg-slate-900 p-8 rounded-full border border-amber-500/30 shadow-2xl">
+                   <Lock size={64} className="text-amber-500" />
+                </div>
              </div>
              
-             <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
-               VIP Lounge <span className="text-slate-700">Locked</span>
+             <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight text-center">
+               VIP Access <span className="text-slate-700">Restricted</span>
              </h1>
-             
-             <p className="text-xl text-slate-400 max-w-xl mx-auto mb-10 leading-relaxed">
-               This area requires a valid access code. <br/>
-               Please enter your code in the header or click below to get one.
+             <p className="text-slate-400 max-w-md text-center mb-8 leading-relaxed">
+               Enter a valid access code to unlock our premium AI models, high-risk/high-reward markets, and unlimited generations.
              </p>
 
              <button 
                 onClick={() => setShowUnlockModal(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105"
+                className="bg-white text-slate-950 font-bold py-4 px-10 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2"
              >
-                Get Unlock Code
+                <Unlock size={20} /> Get Access Code
              </button>
-
-             {/* Configuration Guide (Visible as teaser) */}
-             {renderConfigurationGuide()}
          </div>
       )}
 
 
-      {/* CASE 3: VIP SECTION (UNLOCKED) */}
+      {/* ================= VIP SECTION (UNLOCKED) ================= */}
       {activeSection === SectionType.VIP && premiumStatus.role !== 'free' && (
         <div className="animate-in fade-in duration-500">
-          <div className="flex flex-col xl:flex-row justify-between items-end xl:items-start mb-8 gap-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                 <span className="flex items-center gap-2">
-                   <Crown className="text-amber-400" fill="currentColor" />
-                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-200">
-                     VIP Lounge
-                   </span>
-                 </span>
-              </h1>
-              <p className="text-slate-400 text-sm max-w-lg">
-                High-value opportunities curated by our advanced AI model. Customize your strategy below.
-              </p>
+          
+          {/* Controls Bar */}
+          <div className="bg-slate-900/60 backdrop-blur-sm border border-white/5 rounded-2xl p-4 mb-8 flex flex-col xl:flex-row gap-6 items-end xl:items-center justify-between">
+            <div className="w-full xl:w-auto">
+               <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-1">
+                  <Crown className="text-amber-400" fill="currentColor" size={24}/>
+                  <span>VIP Lounge</span>
+               </h2>
+               <p className="text-slate-400 text-xs">AI-Powered Elite Predictions</p>
             </div>
-            
-            {/* VIP CONTROLS */}
-            <div className="flex flex-wrap items-center gap-3 justify-end xl:self-center">
+
+            <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-end">
               
-              {/* Load History Button */}
               {hasVipHistory && (
-                  <button 
-                     onClick={handleLoadVipHistory}
-                     className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-colors h-10"
-                     title="View today's saved VIP predictions"
-                  >
-                     <History size={16} className="text-amber-500" />
-                     <span>Today's History</span>
+                  <button onClick={handleLoadVipHistory} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-bold transition-colors">
+                     <History size={16} className="text-amber-500" /> <span className="hidden sm:inline">History</span>
                   </button>
               )}
 
-              <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-2 border border-slate-700 h-10 ring-1 ring-white/5 focus-within:ring-amber-500/50 focus-within:border-amber-500/50 transition-all">
-                <Filter size={14} className="text-amber-500" />
-                <span className="text-xs text-slate-400 font-medium whitespace-nowrap hidden sm:inline">Market:</span>
-                <select 
-                  value={selectedMarket}
-                  onChange={(e) => setSelectedMarket(e.target.value)}
-                  className="bg-transparent text-sm text-white focus:outline-none font-medium cursor-pointer [&>option]:bg-slate-900"
-                >
-                  <option value="Any">Any Best Value</option>
-                  <option value="Safe Market">Safe Market (Low Risk)</option>
-                  <option value="Home or Away Win">Home or Away Win (FT)</option>
-                  <option value="Draw">Draw (FT)</option>
-                  <option value="1up">1up (1st Half Winner)</option>
-                  <option value="2up">2up (Early Payout)</option>
-                  <option value="Build the Bet">Build the Bet (Combo)</option>
-                  <option value="Over 2.5 Goals">Over 2.5 Goals</option>
-                  <option value="Under 2.5 Goals">Under 2.5 Goals</option>
-                  <option value="BTTS">Both Teams to Score (Yes/No)</option>
-                  <option value="BTTS & Over 2.5">BTTS & Over 2.5 Goals</option>
-                  <option value="Win & Over 2.5 Goals">Win & Over 2.5 Goals</option>
-                  <option value="Correct Score">Correct Score</option>
-                  <option value="HT/FT">HT/FT</option>
-                  <option value="Over 1.5 Goals">Over 1.5 Goals</option>
-                  <option value="Home Team Over 1.5 Goals">Home Team Over 1.5 Goals</option>
-                  <option value="Away Team Over 1.5 Goals">Away Team Over 1.5 Goals</option>
-                </select>
+              {/* Market Select */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative flex items-center bg-slate-950 border border-slate-700 rounded-xl px-4 h-11 min-w-[200px]">
+                   <Filter size={16} className="text-amber-500 mr-3" />
+                   <select 
+                      value={selectedMarket}
+                      onChange={(e) => setSelectedMarket(e.target.value)}
+                      className="bg-transparent text-sm text-white focus:outline-none w-full font-medium appearance-none cursor-pointer"
+                   >
+                      <option value="Any">Best Value (Recommended)</option>
+                      <option value="Safe Market">Safe Market (1.20 - 1.50)</option>
+                      <option value="Home or Away Win">Home or Away Win</option>
+                      <option value="Draw">Draw (High Risk)</option>
+                      <option value="1up">1st Half Winner</option>
+                      <option value="2up">Early Payout</option>
+                      <option value="Build the Bet">Build the Bet</option>
+                      <option value="Over 2.5 Goals">Over 2.5 Goals</option>
+                      <option value="BTTS">Both Teams to Score</option>
+                      <option value="Correct Score">Correct Score (Extreme)</option>
+                      <option value="HT/FT">HT/FT</option>
+                   </select>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-2 border border-slate-700 h-10 ring-1 ring-white/5 focus-within:ring-amber-500/50 focus-within:border-amber-500/50 transition-all">
-                <Hash size={14} className="text-amber-500" />
-                <span className="text-xs text-slate-400 font-medium whitespace-nowrap hidden sm:inline">Matches:</span>
+              {/* Count Input */}
+              <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl px-3 h-11 w-24">
+                <Hash size={16} className="text-amber-500 mr-2" />
                 <input
                   type="number"
                   min={1}
@@ -820,77 +681,67 @@ const App: React.FC = () => {
                   value={predictionCount}
                   onChange={handleCountChange}
                   onBlur={handleCountBlur}
-                  className="w-14 bg-transparent text-sm text-white focus:outline-none text-center appearance-none font-bold placeholder-slate-600"
-                  placeholder="6"
+                  className="bg-transparent text-sm text-white focus:outline-none w-full font-bold text-center"
                 />
               </div>
 
+              {/* Generate Button */}
               <button
                 onClick={handleRefresh}
-                disabled={loading || (activeSection === SectionType.VIP && vipLimitReached)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors h-10 ${
+                disabled={loading || vipLimitReached}
+                className={`flex items-center gap-2 px-6 h-11 rounded-xl text-sm font-bold transition-all shadow-lg ${
                   loading || vipLimitReached
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-amber-900/20'
                 }`}
               >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
-                {loading ? 'Scanning...' : vipLimitReached ? 'Daily Limit' : 'Refresh'}
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} fill="currentColor" />}
+                {loading ? 'Analyzing...' : 'Generate'}
               </button>
             </div>
           </div>
 
-          {/* Configuration Guide (VIP Context) */}
-          {renderConfigurationGuide()}
-          <div className="mb-8"></div>
-
-          {/* Content Area */}
+          {/* Results Area */}
           {error ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-slate-900/50 rounded-2xl border border-red-500/20">
-              <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-              <p className="text-slate-300 mb-4">{error}</p>
-              <button 
-                onClick={() => loadPredictions(activeSection, getSkeletonCount(), selectedMarket, true)}
-                className="px-6 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-full transition"
-              >
-                Try Again
-              </button>
+            <div className="flex flex-col items-center justify-center py-20 bg-slate-900/50 rounded-2xl border border-red-500/20 border-dashed">
+              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+              <p className="text-slate-300 mb-6 font-medium">{error}</p>
+              <button onClick={() => loadPredictions(activeSection, getSkeletonCount(), selectedMarket, true)} className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-500">Try Again</button>
             </div>
           ) : loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(getSkeletonCount())].map((_, i) => (
-                <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-80 animate-pulse relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-800/20 to-transparent skew-x-12 translate-x-[-100%] animate-shimmer"></div>
-                  <div className="flex justify-between mb-6">
-                    <div className="h-4 w-20 bg-slate-800 rounded"></div>
-                    <div className="h-4 w-12 bg-slate-800 rounded"></div>
-                  </div>
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="h-12 w-12 rounded-full bg-slate-800"></div>
-                    <div className="h-12 w-12 rounded-full bg-slate-800"></div>
-                  </div>
-                  <div className="h-20 bg-slate-800 rounded-xl mb-4"></div>
-                  <div className="h-4 w-full bg-slate-800 rounded"></div>
+                <div key={i} className="relative bg-slate-900/40 rounded-2xl border border-white/5 p-6 h-80 overflow-hidden">
+                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" style={{ transform: 'skewX(-20deg) translateX(-150%)' }}></div>
+                   <div className="flex justify-between mb-8">
+                      <div className="h-4 w-24 bg-slate-800 rounded"></div>
+                      <div className="h-4 w-12 bg-slate-800 rounded"></div>
+                   </div>
+                   <div className="flex justify-between items-center mb-8 px-4">
+                      <div className="h-14 w-14 rounded-full bg-slate-800"></div>
+                      <div className="h-14 w-14 rounded-full bg-slate-800"></div>
+                   </div>
+                   <div className="h-16 bg-slate-800 rounded-xl mb-4 w-3/4 mx-auto"></div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                 {predictions.map((pred, index) => (
-                  <PredictionCard 
-                    key={`${pred.homeTeam}-${index}`} 
-                    prediction={pred} 
-                    type={activeSection} 
-                  />
+                  <PredictionCard key={`${pred.homeTeam}-${index}`} prediction={pred} type={activeSection} />
                 ))}
             </div>
           )}
 
           {!loading && predictions.length === 0 && !error && (
-            <div className="text-center py-20 text-slate-500">
-              {hasSearched 
-                ? 'No suitable matches found based on your filters. Try selecting "Any Best Value".'
-                : 'Select your market and count above, then click "Refresh" to generate VIP predictions.'}
+            <div className="text-center py-24 border-2 border-dashed border-slate-800 rounded-3xl">
+               <div className="inline-flex p-6 bg-slate-900 rounded-full mb-6 shadow-inner">
+                  <Filter size={48} className="text-slate-700" />
+               </div>
+               <h3 className="text-slate-200 text-xl font-bold mb-2">Ready to Analyze</h3>
+               <p className="text-slate-500 max-w-sm mx-auto">
+                 Select your preferred market and number of matches above, then hit <strong>Generate</strong> to start the AI.
+               </p>
             </div>
           )}
         </div>
